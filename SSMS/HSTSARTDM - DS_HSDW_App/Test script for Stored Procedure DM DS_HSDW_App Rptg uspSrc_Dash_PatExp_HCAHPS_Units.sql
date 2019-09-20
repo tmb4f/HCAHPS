@@ -52,8 +52,8 @@ DECLARE @currdate AS DATE;
 DECLARE @startdate AS DATE;
 DECLARE @enddate AS DATE;
 
-SET @startdate = '7/1/2017 00:00 AM'
-SET @enddate = '6/30/2020 11:59 PM'
+--SET @startdate = '7/1/2017 00:00 AM'
+--SET @enddate = '6/30/2020 11:59 PM'
 
     SET @currdate=CAST(GETDATE() AS DATE);
 
@@ -65,12 +65,17 @@ SET @enddate = '6/30/2020 11:59 PM'
         END; 
 
 ----------------------------------------------------
+DECLARE @locstartdate SMALLDATETIME,
+        @locenddate SMALLDATETIME
+
+SET @locstartdate = @startdate
+SET @locenddate   = @enddate
 
 IF OBJECT_ID('tempdb..#surveys_ip ') IS NOT NULL
 DROP TABLE #surveys_ip
 
-IF OBJECT_ID('tempdb..#surveys_ip_check ') IS NOT NULL
-DROP TABLE #surveys_ip_check
+IF OBJECT_ID('tempdb..#surveys_ip_goals ') IS NOT NULL
+DROP TABLE #surveys_ip_goals
 
 IF OBJECT_ID('tempdb..#surveys_ip2 ') IS NOT NULL
 DROP TABLE #surveys_ip2
@@ -308,38 +313,39 @@ VALUES
 --(2019,'SHRTSTAY','10243047','UVHE SHORT STAY UNIT'),
 --(2019,'SSU ED','10243047','UVHE SHORT STAY UNIT');
 
-SELECT goals.*
-  --   , deptrns.Epic_Department_Id
-	 --, deptrns.Epic_Department_Name
---SELECT DISTINCT
---	UNIT
---SELECT DISTINCT
---    goals.GOAL_FISCAL_YR
---  , goals.SERVICE_LINE
---  , goals.UNIT
---SELECT DISTINCT
---    goals.SERVICE_LINE
---  , goals.EPIC_DEPARTMENT_ID
---  , goals.EPIC_DEPARTMENT_NAME
-FROM Rptg.HCAHPS_Goals_Test goals
---LEFT OUTER JOIN @goal_unit_department_translation deptrns -- 2019
---ON deptrns.[Goal_Fiscal_Yr] = [goals].[GOAL_FISCAL_YR]
---AND deptrns.Goals_Unit = goals.UNIT
---WHERE GOAL_FISCAL_YR = 2018
---WHERE goals.GOAL_FISCAL_YR = 2019
-WHERE goals.GOAL_FISCAL_YR = 2020
+--SELECT goals.*
+--  --   , deptrns.Epic_Department_Id
+--	 --, deptrns.Epic_Department_Name
+----SELECT DISTINCT
+----	UNIT
+----SELECT DISTINCT
+----    goals.GOAL_FISCAL_YR
+----  , goals.SERVICE_LINE
+----  , goals.UNIT
+----SELECT DISTINCT
+----    goals.SERVICE_LINE
+----  , goals.EPIC_DEPARTMENT_ID
+----  , goals.EPIC_DEPARTMENT_NAME
+--FROM Rptg.HCAHPS_Goals_Test goals
+----LEFT OUTER JOIN @goal_unit_department_translation deptrns -- 2019
+----ON deptrns.[Goal_Fiscal_Yr] = [goals].[GOAL_FISCAL_YR]
+----AND deptrns.Goals_Unit = goals.UNIT
+----WHERE GOAL_FISCAL_YR = 2018
+----WHERE goals.GOAL_FISCAL_YR = 2019
+----WHERE goals.GOAL_FISCAL_YR = 2020
+----ORDER BY goals.GOAL_FISCAL_YR
+----       , goals.SERVICE_LINE
+----	   , goals.UNIT
+----	   , goals.DOMAIN
+----ORDER BY UNIT
+----ORDER BY goals.GOAL_FISCAL_YR
+----       , goals.SERVICE_LINE
+----	   , goals.UNIT
+----ORDER BY goals.EPIC_DEPARTMENT_ID
 --ORDER BY goals.GOAL_FISCAL_YR
 --       , goals.SERVICE_LINE
---	   , goals.UNIT
---	   , goals.DOMAIN
---ORDER BY UNIT
---ORDER BY goals.GOAL_FISCAL_YR
---       , goals.SERVICE_LINE
---	   , goals.UNIT
---ORDER BY goals.EPIC_DEPARTMENT_ID
-ORDER BY goals.SERVICE_LINE
-	   , goals.EPIC_DEPARTMENT_NAME
-       , goals.DOMAIN
+--	   , goals.EPIC_DEPARTMENT_NAME
+--       , goals.DOMAIN
 
 SELECT DISTINCT
 	 Resp.SURVEY_ID
@@ -347,36 +353,42 @@ SELECT DISTINCT
 	,Resp.RECDATE
 	,Resp.DISDATE
 	,ddte.Fyear_num AS REC_FY
-	,Resp.FY AS DIS_FY
+	--,Resp.FY AS DIS_FY
 	,phys.DisplayName AS Phys_Name
 	,phys.DEPT AS Phys_Dept
 	,phys.Division AS Phys_Div
 	--,RespUnit.resp_UNIT
-	,RespUnit.trnsf_UNIT
-	--,CASE WHEN RespUnit.UNIT = 'obs' THEN 'Womens and Childrens'
+	--,RespUnit.trnsf_UNIT
+	--,RespUnit.UNIT
+	--,bcsm.Service_Line AS bcsm_Service_Line
+	--,CASE WHEN RespUnit.trnsf_UNIT = 'obs' THEN 'Womens and Childrens'
 	--	  WHEN bcsm.Service_Line IS NULL THEN 'Other'
 	--	  ELSE bcsm.Service_Line
-	--	  END AS Service_Line -- obs appears as both 8nor and 8cob
-	,bcsm.Service_Line AS bcsm_Service_Line
-	,CASE WHEN RespUnit.trnsf_UNIT = 'obs' THEN 'Womens and Childrens'
+	--	  END AS trnsf_Service_Line -- obs appears as both 8nor and 8cob
+	,CASE WHEN RespUnit.UNIT = 'obs' THEN 'Womens and Childrens'
 		  WHEN bcsm.Service_Line IS NULL THEN 'Other'
 		  ELSE bcsm.Service_Line
-		  END AS trnsf_Service_Line -- obs appears as both 8nor and 8cob
+		  END AS Service_Line -- obs appears as both 8nor and 8cob
 	--,mdm.service_line AS Service_Line
-	--,CASE WHEN RespUnit.UNIT IS NULL THEN 'Other' ELSE RespUnit.UNIT END AS UNIT
-	,CASE WHEN RespUnit.trnsf_UNIT IS NULL THEN 'Other' ELSE RespUnit.trnsf_UNIT END AS UNIT
+	--,CASE WHEN RespUnit.trnsf_UNIT IS NULL THEN 'Other' ELSE RespUnit.trnsf_UNIT END AS UNIT
+	,CASE WHEN RespUnit.UNIT IS NULL THEN 'Other' ELSE RespUnit.UNIT END AS UNIT
     --,COALESCE(unittrns.Goals_Unit, CASE WHEN RespUnit.trnsf_UNIT IS NULL THEN 'Other' ELSE RespUnit.trnsf_UNIT END) AS Unit_Goals
-    ,unittrns.Goals_Unit AS Unit_Goals
+    --,unittrns.Goals_Unit AS Unit_Goals
+    --,CAST(unittrns.Goals_Unit AS VARCHAR(150)) AS Goals_UNIT
+    ,CAST(COALESCE(unittrns.Goals_Unit,'Unknown') AS VARCHAR(150)) AS Goals_UNIT
 	,Resp.sk_Dim_Clrt_DEPt
 	--,bcsm.[Epic DEPARTMENT_ID] AS bcsm_Epic_DEPARTMENT_ID
 	--,dep1.Clrt_DEPt_Nme AS bcsm_Clrt_DEPt_Nme
 	--,dep2.DEPARTMENT_ID AS dep_DEPARTMENT_ID
 	--,dep2.Clrt_DEPt_Nme AS dep_Clrt_DEPt_Nme
-	,dep.DEPARTMENT_ID AS dep_DEPARTMENT_ID
-	,dep.Clrt_DEPt_Nme AS dep_Clrt_DEPt_Nme
+	--,dep.DEPARTMENT_ID AS dep_DEPARTMENT_ID
+	--,dep.Clrt_DEPt_Nme AS dep_Clrt_DEPt_Nme
+	--,CAST(dep.DEPARTMENT_ID AS VARCHAR(255)) AS DEPARTMENT_ID
+	,CAST(COALESCE(dep.DEPARTMENT_ID,'Unknown') AS VARCHAR(255)) AS DEPARTMENT_ID
+	,dep.Clrt_DEPt_Nme AS Clrt_DEPt_Nme
 	--,COALESCE(deptrns.Epic_Department_Id, dep.DEPARTMENT_ID) AS Department_Id_Goals
 	--,COALESCE(deptrns.Epic_Department_Name, dep.Clrt_DEPt_Nme) AS Department_Name_Goals
-	,mdm.service_line AS mdm_Service_Line
+	--,mdm.service_line AS mdm_Service_Line
 	--,CASE WHEN mdm.service_line = 'Unknown' OR (Resp.FY = 2018 AND mdm.service_line = 'Transplant') THEN
 	--,CASE WHEN mdm.service_line = 'Unknown' OR (ddte.Fyear_num = 2018 AND mdm.service_line = 'Transplant') THEN
 	--		CASE WHEN RespUnit.trnsf_UNIT = 'obs' THEN 'Womens and Childrens'
@@ -385,13 +397,29 @@ SELECT DISTINCT
 	--		END
 	--	  ELSE mdm.service_line
 	-- END AS mdm_Service_Line
-	,CASE WHEN mdm.service_line = 'Unknown' OR (ddte.Fyear_num = 2018 AND mdm.service_line = 'Transplant') THEN
-			CASE WHEN RespUnit.trnsf_UNIT = 'obs' THEN 'Womens and Childrens'
-				WHEN bcsm.Service_Line IS NULL THEN 'Other'
-				ELSE bcsm.Service_Line
-			END
-		  ELSE mdm.service_line
-	 END AS Service_Line_Goals
+	--,CASE WHEN mdm.service_line = 'Unknown' OR (ddte.Fyear_num = 2018 AND mdm.service_line = 'Transplant') THEN
+	--		CASE WHEN RespUnit.trnsf_UNIT = 'obs' THEN 'Womens and Childrens'
+	--			WHEN bcsm.Service_Line IS NULL THEN 'Other'
+	--			ELSE bcsm.Service_Line
+	--		END
+	--	  ELSE mdm.service_line
+	-- END AS Service_Line_Goals
+	--,CASE WHEN mdm.service_line = 'Unknown' OR (ddte.Fyear_num = 2018 AND mdm.service_line = 'Transplant') THEN
+	--		CASE WHEN RespUnit.UNIT = 'obs' THEN 'Womens and Childrens'
+	--			WHEN bcsm.Service_Line IS NULL THEN 'Other'
+	--			ELSE bcsm.Service_Line
+	--		END
+	--	  ELSE mdm.service_line
+	-- --END AS Service_Line_Goals
+	-- END AS Goals_Service_Line
+	,COALESCE(CASE WHEN mdm.service_line = 'Unknown' OR (ddte.Fyear_num = 2018 AND mdm.service_line = 'Transplant') THEN
+			       CASE WHEN RespUnit.UNIT = 'obs' THEN 'Womens and Childrens'
+				        WHEN bcsm.Service_Line IS NULL THEN 'Other'
+				        ELSE bcsm.Service_Line
+			       END
+		           ELSE mdm.service_line
+			  --END AS Service_Line_Goals
+	          END, 'Unknown') AS Goals_Service_Line
 	,CAST(Resp.VALUE AS NVARCHAR(500)) AS VALUE -- prevents Tableau from erroring out on import data source
 	,CASE WHEN Resp.VALUE IS NOT NULL THEN 1 ELSE 0 END AS VAL_COUNT
 	,extd.DOMAIN
@@ -477,7 +505,8 @@ SELECT DISTINCT
 			WHEN 'MSIC' THEN 'Other'
 			WHEN 'MSICU' THEN 'Other'
 			WHEN 'NNICU' THEN 'NNIC'
-			ELSE CAST(VALUE AS NVARCHAR(500)) END AS trnsf_UNIT
+			--ELSE CAST(VALUE AS NVARCHAR(500)) END AS trnsf_UNIT
+			ELSE CAST(VALUE AS NVARCHAR(500)) END AS UNIT
 		FROM DS_HSDW_Prod.dbo.Fact_PressGaney_Responses WHERE sk_Dim_PG_Question = '96' -- (UNITS in CASE don't have a corresponding match in Balanced Scorecard Mapping, OBS handled separately)
 	) AS RespUnit
 	ON Resp.SURVEY_ID = RespUnit.SURVEY_ID
@@ -499,7 +528,8 @@ SELECT DISTINCT
 		ON RESP.sk_Dim_PG_Question = extd.sk_Dim_PG_Question
 	LEFT OUTER JOIN DS_HSDW_Prod.Rptg.Balanced_ScoreCard_Mapping bcsm
 		--ON RespUnit.UNIT = bcsm.PressGaney_name
-		ON RespUnit.trnsf_UNIT = bcsm.PressGaney_name
+		--ON RespUnit.trnsf_UNIT = bcsm.PressGaney_name
+		ON RespUnit.UNIT = bcsm.PressGaney_name
 	--LEFT OUTER JOIN DS_HSDW_Prod.Rptg.vwDim_Clrt_DEPt dep1
 	--    ON dep1.DEPARTMENT_ID = CAST(bcsm.[Epic DEPARTMENT_ID] AS NUMERIC(18,0))
 	--LEFT OUTER JOIN DS_HSDW_Prod.Rptg.vwDim_Clrt_DEPt dep2
@@ -526,7 +556,8 @@ SELECT DISTINCT
 	--WHERE  Resp.Svc_Cde='IN' AND Resp.FY = 2020 AND qstn.sk_Dim_PG_Question IN
 	--WHERE  Resp.Svc_Cde='IN' AND Resp.FY = 2019 AND qstn.sk_Dim_PG_Question IN
 	--WHERE  Resp.Svc_Cde='IN' AND (Resp.FY BETWEEN 2018 AND 2020) AND qstn.sk_Dim_PG_Question IN
-	WHERE  Resp.Svc_Cde='IN' AND (ddte.Fyear_num BETWEEN 2018 AND 2020) AND qstn.sk_Dim_PG_Question IN
+	--WHERE  Resp.Svc_Cde='IN' AND (ddte.Fyear_num BETWEEN 2018 AND 2020) AND qstn.sk_Dim_PG_Question IN
+	WHERE  Resp.Svc_Cde='IN' AND qstn.sk_Dim_PG_Question IN
 	(
 		'1','2','4','5','6','7','11','14','16','17','18','24','27','28','29',
 		'30','32','33','34','37','38','84','85','86','87','87','88','89',
@@ -542,7 +573,471 @@ SELECT DISTINCT
 	--	ON ResAdj.sk_Dim_PG_Question = QuestAdj.sk_Dim_PG_Question AND ResAdj.Svc_Cde = QuestAdj.Svc_Cde
 	--	WHERE QuestAdj.VARNAME = 'ADJSAMP' AND QuestAdj.Svc_Cde = 'IN' AND VALUE = 'NOT INCLUDED'
 	--)
+	ORDER BY REC_FY, UNIT, Goals_UNIT, Service_Line, Goals_Service_Line, DEPARTMENT_ID, Domain_Goals, sk_Dim_PG_Question, SURVEY_ID
 
+  -- Create indexes for temp table #surveys_ip
+  --CREATE UNIQUE CLUSTERED INDEX IX_surveysip ON #surveys_ip (REC_FY, UNIT, Goals_UNIT, Domain_Goals, sk_Dim_PG_Question, SURVEY_ID)
+  CREATE NONCLUSTERED INDEX IX_surveysip ON #surveys_ip (REC_FY, UNIT, Goals_UNIT, Domain_Goals, sk_Dim_PG_Question, SURVEY_ID)
+  CREATE NONCLUSTERED INDEX IX_surveysip2 ON #surveys_ip (REC_FY, Service_Line, Goals_Service_Line, Domain_Goals, sk_Dim_PG_Question, SURVEY_ID)
+  CREATE NONCLUSTERED INDEX IX_surveysip3 ON #surveys_ip (REC_FY, DEPARTMENT_ID, Domain_Goals, sk_Dim_PG_Question, SURVEY_ID)
+
+  --SELECT COUNT(*) AS Row_Count FROM #surveys_ip
+
+------------------------------------------------------------------------------------------
+--- GENERATE GOALS
+
+SELECT
+       all_goals.REC_FY,
+       all_goals.UNIT,
+       all_goals.Goals_UNIT,
+	   all_goals.Service_Line,
+	   all_goals.Goals_Service_Line,
+    --   all_goals.sk_Dim_Clrt_DEPt,
+       all_goals.DEPARTMENT_ID,
+       --all_goals.Clrt_DEPt_Nme,
+       all_goals.Domain_Goals,
+       all_goals.GOAL
+INTO #surveys_ip_goals
+FROM
+(
+SELECT -- Received FYs 2018, 2019 
+       resp.REC_FY,
+       resp.UNIT,
+	   resp.Goals_UNIT,
+       resp.Service_Line,
+	   resp.Goals_Service_Line,
+       --resp.sk_Dim_Clrt_DEPt,
+       resp.DEPARTMENT_ID,
+       --resp.Clrt_DEPt_Nme,
+       resp.Domain_Goals,
+	   goal.GOAL
+FROM
+	(
+	SELECT DISTINCT
+	       REC_FY,
+           UNIT,
+		   Goals_UNIT,
+           Service_Line,
+		   Goals_Service_Line,
+           --sk_Dim_Clrt_DEPt,
+           DEPARTMENT_ID,
+           --Clrt_DEPt_Nme,
+           Domain_Goals
+	FROM #surveys_ip
+	WHERE REC_FY IN (2018,2019)
+	) resp
+	LEFT OUTER JOIN
+	(
+	SELECT goals.GOAL_FISCAL_YR
+	     , goals.UNIT
+	     , goals.DOMAIN
+		 , goals.GOAL
+	FROM Rptg.HCAHPS_Goals_Test goals
+	) goal
+	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2018, 2019
+	AND goal.UNIT = resp.Goals_UNIT -- 2018, 2019
+	AND goal.DOMAIN = resp.Domain_Goals -- 2018, 2019
+	WHERE goal.UNIT IS NOT NULL
+UNION ALL
+SELECT
+       goals.REC_FY,
+       goals.UNIT,
+	   goals.Goals_UNIT,
+       goals.Service_Line,
+	   goals.Goals_Service_Line,
+       --goals.sk_Dim_Clrt_DEPt,
+       goals.DEPARTMENT_ID,
+       --goals.Clrt_DEPt_Nme,
+       goals.Domain_Goals,
+       goal.GOAL
+FROM
+(
+SELECT
+	   resp.REC_FY,
+       resp.UNIT,
+	   resp.Goals_UNIT,
+       resp.Service_Line,
+	   resp.Goals_Service_Line,
+       --resp.sk_Dim_Clrt_DEPt,
+       resp.DEPARTMENT_ID,
+       --resp.Clrt_DEPt_Nme,
+       resp.Domain_Goals,
+	   goal.GOAL
+FROM
+	(
+	SELECT DISTINCT
+	       REC_FY,
+           UNIT,
+	       Goals_UNIT,
+           Service_Line,
+		   Goals_Service_Line,
+           --sk_Dim_Clrt_DEPt,
+           DEPARTMENT_ID,
+           --Clrt_DEPt_Nme,
+           Domain_Goals
+	FROM #surveys_ip
+	WHERE REC_FY IN (2018,2019)
+	) resp
+	LEFT OUTER JOIN
+	(
+	SELECT GOAL_FISCAL_YR
+	     , UNIT
+	     , DOMAIN
+		 , GOAL
+	FROM Rptg.HCAHPS_Goals_Test
+	) goal
+	ON goal.GOAL_FISCAL_YR = resp.REC_FY
+	AND goal.UNIT = resp.Goals_UNIT
+	AND goal.DOMAIN = resp.Domain_Goals
+	WHERE goal.UNIT IS NULL
+) goals
+LEFT OUTER JOIN
+(
+SELECT GOAL_FISCAL_YR
+     , SERVICE_LINE
+     , UNIT
+	 , DOMAIN
+	 , GOAL
+FROM Rptg.HCAHPS_Goals_Test
+WHERE UNIT = 'All Units'
+) goal
+ON goal.GOAL_FISCAL_YR = goals.REC_FY
+AND goal.SERVICE_LINE = goals.Goals_Service_Line
+AND goal.DOMAIN = goals.Domain_Goals
+UNION ALL
+SELECT-- Received FYs 2020
+       resp.REC_FY,
+       resp.UNIT,
+	   resp.Goals_UNIT,
+       resp.Service_Line,
+	   resp.Goals_Service_Line,
+       --resp.sk_Dim_Clrt_DEPt,
+       resp.DEPARTMENT_ID,
+       --resp.Clrt_DEPt_Nme,
+       resp.Domain_Goals,
+	   goal.GOAL
+FROM
+	(
+	SELECT DISTINCT
+	       REC_FY,
+           UNIT,
+		   Goals_UNIT,
+           Service_Line,
+		   Goals_Service_Line,
+           --sk_Dim_Clrt_DEPt,
+           DEPARTMENT_ID,
+           --Clrt_DEPt_Nme,
+           Domain_Goals
+	FROM #surveys_ip
+	WHERE REC_FY = 2020
+	) resp
+	LEFT OUTER JOIN
+	(
+	SELECT goals.GOAL_FISCAL_YR
+	     , goals.UNIT
+		 , goals.EPIC_DEPARTMENT_ID
+		 , goals.EPIC_DEPARTMENT_NAME
+	     , goals.DOMAIN
+		 , goals.GOAL
+	FROM Rptg.HCAHPS_Goals_Test goals
+	WHERE goals.EPIC_DEPARTMENT_ID <> 'All Units'
+	) goal
+	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2020
+	--AND CAST(goal.EPIC_DEPARTMENT_ID AS NUMERIC(18,0)) = resp.DEPARTMENT_ID -- 2020
+	AND goal.EPIC_DEPARTMENT_ID = resp.DEPARTMENT_ID -- 2020
+	AND goal.DOMAIN = resp.Domain_Goals -- 2020
+	WHERE goal.UNIT IS NOT NULL
+UNION ALL
+SELECT
+       goals.REC_FY,
+       goals.UNIT,
+	   goals.Goals_UNIT,
+       goals.Service_Line,
+	   goals.Goals_Service_Line,
+       --goals.sk_Dim_Clrt_DEPt,
+       goals.DEPARTMENT_ID,
+       --goals.Clrt_DEPt_Nme,
+       goals.Domain_Goals,
+       goal.GOAL
+FROM
+(
+SELECT
+	   resp.REC_FY,
+       resp.UNIT,
+	   resp.Goals_UNIT,
+       resp.Service_Line,
+	   resp.Goals_Service_Line,
+       --resp.sk_Dim_Clrt_DEPt,
+       resp.DEPARTMENT_ID,
+       --resp.Clrt_DEPt_Nme,
+       resp.Domain_Goals,
+	   goal.GOAL
+FROM
+	(
+	SELECT DISTINCT
+	       REC_FY,
+           UNIT,
+	       Goals_UNIT,
+           Service_Line,
+		   Goals_Service_Line,
+           --sk_Dim_Clrt_DEPt,
+           DEPARTMENT_ID,
+           --Clrt_DEPt_Nme,
+           Domain_Goals
+	FROM #surveys_ip
+	WHERE REC_FY = 2020
+	) resp
+	LEFT OUTER JOIN
+	(
+	SELECT GOAL_FISCAL_YR
+	     , UNIT
+		 , EPIC_DEPARTMENT_ID
+		 , EPIC_DEPARTMENT_NAME
+	     , DOMAIN
+		 , GOAL
+	FROM Rptg.HCAHPS_Goals_Test
+	WHERE EPIC_DEPARTMENT_ID <> 'All Units'
+	) goal
+	ON goal.GOAL_FISCAL_YR = resp.REC_FY
+	--AND CAST(goal.EPIC_DEPARTMENT_ID AS NUMERIC(18,0)) = resp.DEPARTMENT_ID
+	AND goal.EPIC_DEPARTMENT_ID = resp.DEPARTMENT_ID
+	AND goal.DOMAIN = resp.Domain_Goals
+	WHERE goal.UNIT IS NULL
+) goals
+LEFT OUTER JOIN
+(
+SELECT GOAL_FISCAL_YR
+     , SERVICE_LINE
+     , UNIT
+	 , EPIC_DEPARTMENT_ID
+	 , EPIC_DEPARTMENT_NAME
+	 , DOMAIN
+	 , GOAL
+FROM Rptg.HCAHPS_Goals_Test
+WHERE EPIC_DEPARTMENT_ID = 'All Units'
+) goal
+ON goal.GOAL_FISCAL_YR = goals.REC_FY
+AND goal.SERVICE_LINE = goals.Goals_Service_Line
+AND goal.DOMAIN = goals.Domain_Goals
+) all_goals
+ORDER BY REC_FY, UNIT, Goals_UNIT, DEPARTMENT_ID, Service_Line, Goals_Service_Line, Domain_Goals
+/*
+ON surveys_ip_goals.REC_FY = surveys_ip.REC_FY
+AND surveys_ip_goals.UNIT = surveys_ip.UNIT
+AND surveys_ip_goals.Goals_UNIT = surveys_ip.Goals_UNIT
+AND surveys_ip_goals.Service_Line = surveys_ip.Service_Line
+AND surveys_ip_goals.Goals_Service_Line = surveys_ip.Goals_Service_Line*/
+  -- Create indexes for temp table #surveys_ip_goals
+  --CREATE UNIQUE CLUSTERED INDEX IX_surveysipgoals ON #surveys_ip_goals (REC_FY, UNIT, Goals_UNIT, Service_Line, Goals_Service_Line, Domain_Goals)
+  CREATE NONCLUSTERED INDEX IX_surveysipgoals ON #surveys_ip_goals (REC_FY, UNIT, Goals_UNIT, Service_Line, Goals_Service_Line, Domain_Goals)
+  CREATE NONCLUSTERED INDEX IX_ssurveysipgoals2 ON #surveys_ip_goals (REC_FY, DEPARTMENT_ID, Service_Line, Goals_Service_Line, Domain_Goals)
+
+--SELECT *
+SELECT DISTINCT
+	REC_FY
+  , UNIT
+  , Goals_UNIT
+  , Service_Line
+  , Goals_Service_Line
+  , DEPARTMENT_ID
+  , Domain_Goals
+  , GOAL
+FROM #surveys_ip_goals
+--WHERE REC_FY IN (2018,2019)
+--WHERE REC_FY = 2020
+--AND (UNIT IS NULL OR Goals_UNIT IS NULL OR Service_Line IS NULL OR Goals_Service_Line IS NULL)
+--ORDER BY  REC_FY
+--		, Clrt_DEPt_Nme
+--		, Goals_Service_Line
+--		, Goals_UNIT
+--		, Domain_Goals
+ORDER BY  REC_FY
+        , UNIT
+		, Goals_UNIT
+		, Service_Line
+		, Goals_Service_Line
+		, DEPARTMENT_ID
+		, Domain_Goals
+
+------------------------------------------------------------------------------------------
+--- JOIN TO DIM_DATE
+
+ SELECT
+	'Inpatient HCAHPS' AS Event_Type
+	,SURVEY_ID
+	,sk_Fact_Pt_Acct
+	,LEFT(DATENAME(MM, rec.day_date), 3) + ' ' + CAST(DAY(rec.day_date) AS VARCHAR(2)) AS Rpt_Prd
+	,rec.day_date AS Event_Date
+	,dis.day_date AS Event_Date_Disch
+	,rec.Fyear_num AS Event_FY
+	,sk_Dim_PG_Question
+	,VARNAME
+	,QUESTION_TEXT_ALIAS
+	,surveys_ip.Domain
+	,Domain_Goals
+	,RECDATE AS Recvd_Date
+	,DISDATE AS Discharge_Date
+	,MRN_int AS Patient_ID
+	,Pat_Name
+	,Pat_Sex
+	,Pat_DOB
+	,Pat_Age
+	,Pat_Age_Survey_Recvd
+	,Pat_Age_Survey_Answer
+	,CASE WHEN Pat_Age_Survey_Answer < 18 THEN 1 ELSE 0 END AS Peds
+	,NPINumber
+	,Phys_Name
+	,Phys_Dept
+	,Phys_Div
+	,GOAL
+	,CASE WHEN surveys_ip.UNIT = 'SHRTSTAY' THEN 'SSU' ELSE surveys_ip.UNIT END AS UNIT -- CAN'T MAP SHRTSTAY TO GOALS AND SVC LINE WITHOUT A CHANGE TO BCSM TABLE
+	,surveys_ip.Service_Line
+	,VALUE
+	,Value_Resp_Grp
+	,TOP_BOX
+	,VAL_COUNT
+	,rec.quarter_name
+	,rec.month_short_name
+	,Goals_Service_Line
+	,Goals_UNIT
+	,DEPARTMENT_ID
+INTO #surveys_ip2
+FROM DS_HSDW_Prod.dbo.Dim_Date rec
+--LEFT OUTER JOIN #surveys_ip surveys_ip
+LEFT OUTER JOIN
+(
+SELECT surveys_ip.SURVEY_ID,
+       surveys_ip.sk_Fact_Pt_Acct,
+       surveys_ip.RECDATE,
+       surveys_ip.DISDATE,
+       surveys_ip.REC_FY,
+       surveys_ip.Phys_Name,
+       surveys_ip.Phys_Dept,
+       surveys_ip.Phys_Div,
+       surveys_ip.Service_Line,
+       surveys_ip.UNIT,
+       surveys_ip.Goals_UNIT,
+       surveys_ip.sk_Dim_Clrt_DEPt,
+       surveys_ip.DEPARTMENT_ID,
+       surveys_ip.Clrt_DEPt_Nme,
+       surveys_ip.Goals_Service_Line,
+       surveys_ip.VALUE,
+       surveys_ip.VAL_COUNT,
+       surveys_ip.DOMAIN,
+       surveys_ip.Domain_Goals,
+       surveys_ip.Value_Resp_Grp,
+       surveys_ip.TOP_BOX,
+       surveys_ip.VARNAME,
+       surveys_ip.sk_Dim_PG_Question,
+       surveys_ip.QUESTION_TEXT_ALIAS,
+       surveys_ip.MRN_int,
+       surveys_ip.NPINumber,
+       surveys_ip.Pat_Name,
+       surveys_ip.Pat_DOB,
+       surveys_ip.Pat_Age,
+       surveys_ip.Pat_Age_Survey_Recvd,
+       surveys_ip.Pat_Age_Survey_Answer,
+       surveys_ip.Pat_Sex
+     , surveys_ip_goals.GOAL
+FROM #surveys_ip surveys_ip
+LEFT OUTER JOIN
+(
+SELECT DISTINCT
+	REC_FY
+  , UNIT
+  , Goals_Unit
+  , Service_Line
+  , Goals_Service_Line
+  , Domain_Goals
+  , GOAL
+FROM #surveys_ip_goals
+) surveys_ip_goals
+ON surveys_ip_goals.REC_FY = surveys_ip.REC_FY
+AND surveys_ip_goals.UNIT = surveys_ip.UNIT
+AND surveys_ip_goals.Goals_UNIT = surveys_ip.Goals_UNIT
+AND surveys_ip_goals.Service_Line = surveys_ip.Service_Line
+AND surveys_ip_goals.Goals_Service_Line = surveys_ip.Goals_Service_Line
+AND surveys_ip_goals.Domain_Goals = surveys_ip.Domain_Goals
+WHERE surveys_ip.REC_FY IN (2018,2019)
+UNION ALL
+SELECT surveys_ip.SURVEY_ID,
+       surveys_ip.sk_Fact_Pt_Acct,
+       surveys_ip.RECDATE,
+       surveys_ip.DISDATE,
+       surveys_ip.REC_FY,
+       surveys_ip.Phys_Name,
+       surveys_ip.Phys_Dept,
+       surveys_ip.Phys_Div,
+       surveys_ip.Service_Line,
+       surveys_ip.UNIT,
+       surveys_ip.Goals_UNIT,
+       surveys_ip.sk_Dim_Clrt_DEPt,
+       surveys_ip.DEPARTMENT_ID,
+       surveys_ip.Clrt_DEPt_Nme,
+       surveys_ip.Goals_Service_Line,
+       surveys_ip.VALUE,
+       surveys_ip.VAL_COUNT,
+       surveys_ip.DOMAIN,
+       surveys_ip.Domain_Goals,
+       surveys_ip.Value_Resp_Grp,
+       surveys_ip.TOP_BOX,
+       surveys_ip.VARNAME,
+       surveys_ip.sk_Dim_PG_Question,
+       surveys_ip.QUESTION_TEXT_ALIAS,
+       surveys_ip.MRN_int,
+       surveys_ip.NPINumber,
+       surveys_ip.Pat_Name,
+       surveys_ip.Pat_DOB,
+       surveys_ip.Pat_Age,
+       surveys_ip.Pat_Age_Survey_Recvd,
+       surveys_ip.Pat_Age_Survey_Answer,
+       surveys_ip.Pat_Sex
+     , surveys_ip_goals.GOAL
+FROM #surveys_ip surveys_ip
+LEFT OUTER JOIN
+(
+SELECT DISTINCT
+	REC_FY
+  , DEPARTMENT_ID
+  , Service_Line
+  , Goals_Service_Line
+  , Domain_Goals
+  , GOAL
+FROM #surveys_ip_goals
+)surveys_ip_goals
+ON surveys_ip_goals.REC_FY = surveys_ip.REC_FY
+AND surveys_ip_goals.DEPARTMENT_ID = surveys_ip.DEPARTMENT_ID
+AND surveys_ip_goals.Service_Line = surveys_ip.Service_Line
+AND surveys_ip_goals.Goals_Service_Line = surveys_ip.Goals_Service_Line
+AND surveys_ip_goals.Domain_Goals = surveys_ip.Domain_Goals
+WHERE surveys_ip.REC_FY = 2020
+) surveys_ip
+ON rec.day_date = surveys_ip.RECDATE
+FULL OUTER JOIN DS_HSDW_Prod.dbo.Dim_Date dis -- Need to report by both the discharge date on the survey as well as the received date of the survey
+ON dis.day_date = surveys_ip.DISDATE
+--LEFT OUTER JOIN DS_HSDW_App.Rptg.HCAHPS_Goals goals
+--ON #surveys_ip.UNIT = goals.unit AND #surveys_ip.Domain_Goals = goals.DOMAIN
+WHERE rec.day_date BETWEEN @locstartdate and @locenddate
+
+--SELECT Event_FY
+--      ,Event_Date
+--      ,SURVEY_ID
+--      ,Recvd_Date
+--	  ,Domain_Goals
+--	  ,sk_Dim_PG_Question
+--	  ,Service_Line
+--	  ,Goals_Service_Line
+--	  ,UNIT
+--	  ,Goals_UNIT
+--	  ,DEPARTMENT_ID
+--	  ,GOAL
+SELECT *
+FROM #surveys_ip2
+--ORDER BY Event_Date, SURVEY_ID, sk_Dim_PG_Question
+WHERE Domain_Goals IS NOT NULL AND Domain_Goals <> 'Additional Questions About Your Care'
+ORDER BY Event_FY, Event_Date, SURVEY_ID, Domain_Goals, sk_Dim_PG_Question
+
+/*
 --SELECT *
 --SELECT DISTINCT
 --	FY
@@ -557,17 +1052,22 @@ SELECT DISTINCT
 SELECT
 	--resp.FY
 	resp.REC_FY
-  , resp.resp_UNIT
-  , resp.trnsf_UNIT
+  --, resp.resp_UNIT
+  --, resp.trnsf_UNIT
   , resp.UNIT
-  , resp.Unit_Goals
-  , resp.bcsm_Service_Line
-  , resp.trnsf_Service_Line
-  , resp.mdm_Service_Line
-  , resp.Service_Line_Goals
+  --, resp.Unit_Goals
+  , resp.Goals_UNIT
+  , resp.Service_Line
+  --, resp.bcsm_Service_Line
+  --, resp.trnsf_Service_Line
+  --, resp.mdm_Service_Line
+  --, resp.Service_Line_Goals
+  , resp.Goals_Service_Line
   , resp.sk_Dim_Clrt_DEPt
-  , resp.dep_DEPARTMENT_ID
-  , resp.dep_Clrt_DEPt_Nme
+  --, resp.dep_DEPARTMENT_ID
+  --, resp.dep_Clrt_DEPt_Nme
+  , resp.DEPARTMENT_ID
+  , resp.Clrt_DEPt_Nme
   --, resp.Department_Id_Goals
   --, resp.Department_Name_Goals
   , resp.Domain_Goals
@@ -578,17 +1078,22 @@ FROM #surveys_ip resp
 GROUP BY
 	--resp.FY
 	resp.REC_FY
-  , resp.resp_UNIT
-  , resp.trnsf_UNIT
+  --, resp.resp_UNIT
+  --, resp.trnsf_UNIT
   , resp.UNIT
-  , resp.Unit_Goals
-  , resp.bcsm_Service_Line
-  , resp.trnsf_Service_Line
-  , resp.mdm_Service_Line
-  , resp.Service_Line_Goals
+  --, resp.Unit_Goals
+  , resp.Goals_UNIT
+  , resp.Service_Line
+  --, resp.bcsm_Service_Line
+  --, resp.trnsf_Service_Line
+  --, resp.mdm_Service_Line
+  --, resp.Service_Line_Goals
+  , resp.Goals_Service_Line
   , resp.sk_Dim_Clrt_DEPt
-  , resp.dep_DEPARTMENT_ID
-  , resp.dep_Clrt_DEPt_Nme
+  --, resp.dep_DEPARTMENT_ID
+  --, resp.dep_Clrt_DEPt_Nme
+  , resp.DEPARTMENT_ID
+  , resp.Clrt_DEPt_Nme
   --, resp.Department_Id_Goals
   --, resp.Department_Name_Goals
   , resp.Domain_Goals
@@ -748,16 +1253,21 @@ SELECT
        [all].REC_FY,
        [all].GOAL,
        [all].Domain_Goals,
-       [all].resp_UNIT,
-       [all].trnsf_UNIT,
+       --[all].resp_UNIT,
+       --[all].trnsf_UNIT,
        [all].UNIT,
-       [all].Unit_Goals,
-       [all].trnsf_Service_Line,
-       [all].mdm_Service_Line,
-	   [all].Service_Line_Goals,
+       --[all].Unit_Goals,
+       [all].Goals_UNIT,
+	   [all].Service_Line,
+       --[all].trnsf_Service_Line,
+       --[all].mdm_Service_Line,
+	   --[all].Service_Line_Goals,
+	   [all].Goals_Service_Line,
        [all].sk_Dim_Clrt_DEPt,
-       [all].dep_DEPARTMENT_ID,
-       [all].dep_Clrt_DEPt_Nme,
+       --[all].dep_DEPARTMENT_ID,
+       --[all].dep_Clrt_DEPt_Nme,
+       [all].DEPARTMENT_ID,
+       [all].Clrt_DEPt_Nme,
 	   --[all].Department_Id_Goals,
 	   --[all].Department_Name_Goals,
        --[all].Domain_Goals,
@@ -768,16 +1278,21 @@ FROM
 SELECT
        --resp.FY,
        resp.REC_FY,
-       resp.resp_UNIT,
-       resp.trnsf_UNIT,
+       --resp.resp_UNIT,
+       --resp.trnsf_UNIT,
        resp.UNIT,
-	   resp.Unit_Goals,
-       resp.trnsf_Service_Line,
-       resp.mdm_Service_Line,
-	   resp.Service_Line_Goals,
+	   --resp.Unit_Goals,
+	   resp.Goals_UNIT,
+       resp.Service_Line,
+       --resp.trnsf_Service_Line,
+       --resp.mdm_Service_Line,
+	   --resp.Service_Line_Goals,
+	   resp.Goals_Service_Line,
        resp.sk_Dim_Clrt_DEPt,
-       resp.dep_DEPARTMENT_ID,
-       resp.dep_Clrt_DEPt_Nme,
+       --resp.dep_DEPARTMENT_ID,
+       --resp.dep_Clrt_DEPt_Nme,
+       resp.DEPARTMENT_ID,
+       resp.Clrt_DEPt_Nme,
 	   --resp.Department_Id_Goals,
 	   --resp.Department_Name_Goals,
        resp.Domain_Goals,
@@ -788,16 +1303,21 @@ FROM
 	SELECT
 	       --FY,
 	       REC_FY,
-           resp_UNIT,
-           trnsf_UNIT,
+           --resp_UNIT,
+           --trnsf_UNIT,
            UNIT,
-		   Unit_Goals,
-           trnsf_Service_Line,
-           mdm_Service_Line,
-		   Service_Line_Goals,
+		   --Unit_Goals,
+		   Goals_UNIT,
+           Service_Line,
+           --trnsf_Service_Line,
+           --mdm_Service_Line,
+		   --Service_Line_Goals,
+		   Goals_Service_Line,
            sk_Dim_Clrt_DEPt,
-           dep_DEPARTMENT_ID,
-           dep_Clrt_DEPt_Nme,
+           --dep_DEPARTMENT_ID,
+           --dep_Clrt_DEPt_Nme,
+           DEPARTMENT_ID,
+           Clrt_DEPt_Nme,
 		   --Department_Id_Goals,
 		   --Department_Name_Goals,
            Domain_Goals,
@@ -825,7 +1345,8 @@ FROM
 	) goal
 	--ON goal.GOAL_FISCAL_YR = resp.FY -- 2018, 2019
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2018, 2019
-	AND goal.UNIT = resp.Unit_Goals -- 2018, 2019
+	--AND goal.UNIT = resp.Unit_Goals -- 2018, 2019
+	AND goal.UNIT = resp.Goals_UNIT -- 2018, 2019
 	--AND CAST(goal.EPIC_DEPARTMENT_ID AS NUMERIC(18,0)) = resp.dep_DEPARTMENT_ID -- 2019
 	AND goal.DOMAIN = resp.Domain_Goals -- 2018, 2019
 	--WHERE resp.FY = 2018
@@ -836,16 +1357,21 @@ UNION ALL
 SELECT
        --goals.FY,
        goals.REC_FY,
-       goals.resp_UNIT,
-       goals.trnsf_UNIT,
+       --goals.resp_UNIT,
+       --goals.trnsf_UNIT,
        goals.UNIT,
-	   goals.Unit_Goals,
-       goals.trnsf_Service_Line,
-       goals.mdm_Service_Line,
-	   goals.Service_Line_Goals,
+	   --goals.Unit_Goals,
+	   goals.Goals_UNIT,
+       goals.Service_Line,
+       --goals.trnsf_Service_Line,
+       --goals.mdm_Service_Line,
+	   --goals.Service_Line_Goals,
+	   goals.Goals_Service_Line,
        goals.sk_Dim_Clrt_DEPt,
-       goals.dep_DEPARTMENT_ID,
-       goals.dep_Clrt_DEPt_Nme,
+       --goals.dep_DEPARTMENT_ID,
+       --goals.dep_Clrt_DEPt_Nme,
+       goals.DEPARTMENT_ID,
+       goals.Clrt_DEPt_Nme,
        goals.Domain_Goals,
        goals.Domain_Count,
        goal.GOAL
@@ -854,16 +1380,21 @@ FROM
 SELECT
 	   --resp.FY,
 	   resp.REC_FY,
-       resp.resp_UNIT,
-       resp.trnsf_UNIT,
+       --resp.resp_UNIT,
+       --resp.trnsf_UNIT,
        resp.UNIT,
-	   resp.Unit_Goals,
-       resp.trnsf_Service_Line,
-       resp.mdm_Service_Line,
-	   resp.Service_Line_Goals,
+	   --resp.Unit_Goals,
+	   resp.Goals_UNIT,
+       resp.Service_Line,
+       --resp.trnsf_Service_Line,
+       --resp.mdm_Service_Line,
+	   --resp.Service_Line_Goals,
+	   resp.Goals_Service_Line,
        resp.sk_Dim_Clrt_DEPt,
-       resp.dep_DEPARTMENT_ID,
-       resp.dep_Clrt_DEPt_Nme,
+       --resp.dep_DEPARTMENT_ID,
+       --resp.dep_Clrt_DEPt_Nme,
+       resp.DEPARTMENT_ID,
+       resp.Clrt_DEPt_Nme,
        resp.Domain_Goals,
        resp.Domain_Count,
 	   goal.GOAL
@@ -872,16 +1403,21 @@ FROM
 	SELECT
 	       --FY,
 	       REC_FY,
-           resp_UNIT,
-           trnsf_UNIT,
+           --resp_UNIT,
+           --trnsf_UNIT,
            UNIT,
-	       Unit_Goals,
-           trnsf_Service_Line,
-           mdm_Service_Line,
-		   Service_Line_Goals,
+	       --Unit_Goals,
+	       Goals_UNIT,
+           Service_Line,
+           --trnsf_Service_Line,
+           --mdm_Service_Line,
+		   --Service_Line_Goals,
+		   Goals_Service_Line,
            sk_Dim_Clrt_DEPt,
-           dep_DEPARTMENT_ID,
-           dep_Clrt_DEPt_Nme,
+           --dep_DEPARTMENT_ID,
+           --dep_Clrt_DEPt_Nme,
+           DEPARTMENT_ID,
+           Clrt_DEPt_Nme,
            Domain_Goals,
            Domain_Count
 	FROM #surveys_ip_check
@@ -896,7 +1432,8 @@ FROM
 	FROM Rptg.HCAHPS_Goals_Test
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY
-	AND goal.UNIT = resp.Unit_Goals
+	--AND goal.UNIT = resp.Unit_Goals
+	AND goal.UNIT = resp.Goals_UNIT
 	AND goal.DOMAIN = resp.Domain_Goals
 	--WHERE resp.FY = 2018
 	--AND goal.UNIT IS NULL
@@ -913,23 +1450,29 @@ FROM Rptg.HCAHPS_Goals_Test
 WHERE UNIT = 'All Units'
 ) goal
 ON goal.GOAL_FISCAL_YR = goals.REC_FY
-AND goal.SERVICE_LINE = goals.Service_Line_Goals
+--AND goal.SERVICE_LINE = goals.Service_Line_Goals
+AND goal.SERVICE_LINE = goals.Goals_Service_Line
 AND goal.DOMAIN = goals.Domain_Goals
 ------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------
 UNION ALL
 SELECT
        resp.REC_FY,
-       resp.resp_UNIT,
-       resp.trnsf_UNIT,
+       --resp.resp_UNIT,
+       --resp.trnsf_UNIT,
        resp.UNIT,
-	   resp.Unit_Goals,
-       resp.trnsf_Service_Line,
-       resp.mdm_Service_Line,
-	   resp.Service_Line_Goals,
+	   --resp.Unit_Goals,
+	   resp.Goals_UNIT,
+       resp.Service_Line,
+       --resp.trnsf_Service_Line,
+       --resp.mdm_Service_Line,
+	   --resp.Service_Line_Goals,
+	   resp.Goals_Service_Line,
        resp.sk_Dim_Clrt_DEPt,
-       resp.dep_DEPARTMENT_ID,
-       resp.dep_Clrt_DEPt_Nme,
+       --resp.dep_DEPARTMENT_ID,
+       --resp.dep_Clrt_DEPt_Nme,
+       resp.DEPARTMENT_ID,
+       resp.Clrt_DEPt_Nme,
        resp.Domain_Goals,
        resp.Domain_Count,
 	   goal.GOAL
@@ -937,16 +1480,21 @@ FROM
 	(
 	SELECT
 	       REC_FY,
-           resp_UNIT,
-           trnsf_UNIT,
+           --resp_UNIT,
+           --trnsf_UNIT,
            UNIT,
-		   Unit_Goals,
-           trnsf_Service_Line,
-           mdm_Service_Line,
-		   Service_Line_Goals,
+		   --Unit_Goals,
+		   Goals_UNIT,
+           Service_Line,
+           --trnsf_Service_Line,
+           --mdm_Service_Line,
+		   --Service_Line_Goals,
+		   Goals_Service_Line,
            sk_Dim_Clrt_DEPt,
-           dep_DEPARTMENT_ID,
-           dep_Clrt_DEPt_Nme,
+           --dep_DEPARTMENT_ID,
+           --dep_Clrt_DEPt_Nme,
+           DEPARTMENT_ID,
+           Clrt_DEPt_Nme,
            Domain_Goals,
            Domain_Count
 	FROM #surveys_ip_check
@@ -964,22 +1512,28 @@ FROM
 	WHERE goals.EPIC_DEPARTMENT_ID <> 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2020
-	AND CAST(goal.EPIC_DEPARTMENT_ID AS NUMERIC(18,0)) = resp.dep_DEPARTMENT_ID -- 2020
+	--AND CAST(goal.EPIC_DEPARTMENT_ID AS NUMERIC(18,0)) = resp.dep_DEPARTMENT_ID -- 2020
+	AND CAST(goal.EPIC_DEPARTMENT_ID AS NUMERIC(18,0)) = resp.DEPARTMENT_ID -- 2020
 	AND goal.DOMAIN = resp.Domain_Goals -- 2020
 	WHERE goal.UNIT IS NOT NULL
 UNION ALL
 SELECT
        goals.REC_FY,
-       goals.resp_UNIT,
-       goals.trnsf_UNIT,
+       --goals.resp_UNIT,
+       --goals.trnsf_UNIT,
        goals.UNIT,
-	   goals.Unit_Goals,
-       goals.trnsf_Service_Line,
-       goals.mdm_Service_Line,
-	   goals.Service_Line_Goals,
+	   --goals.Unit_Goals,
+	   goals.Goals_UNIT,
+       goals.Service_Line,
+       --goals.trnsf_Service_Line,
+       --goals.mdm_Service_Line,
+	   --goals.Service_Line_Goals,
+	   goals.Goals_Service_Line,
        goals.sk_Dim_Clrt_DEPt,
-       goals.dep_DEPARTMENT_ID,
-       goals.dep_Clrt_DEPt_Nme,
+       --goals.dep_DEPARTMENT_ID,
+       --goals.dep_Clrt_DEPt_Nme,
+       goals.DEPARTMENT_ID,
+       goals.Clrt_DEPt_Nme,
        goals.Domain_Goals,
        goals.Domain_Count,
        goal.GOAL
@@ -987,16 +1541,21 @@ FROM
 (
 SELECT
 	   resp.REC_FY,
-       resp.resp_UNIT,
-       resp.trnsf_UNIT,
+       --resp.resp_UNIT,
+       --resp.trnsf_UNIT,
        resp.UNIT,
-	   resp.Unit_Goals,
-       resp.trnsf_Service_Line,
-       resp.mdm_Service_Line,
-	   resp.Service_Line_Goals,
+	   --resp.Unit_Goals,
+	   resp.Goals_UNIT,
+       resp.Service_Line,
+       --resp.trnsf_Service_Line,
+       --resp.mdm_Service_Line,
+	   --resp.Service_Line_Goals,
+	   resp.Goals_Service_Line,
        resp.sk_Dim_Clrt_DEPt,
-       resp.dep_DEPARTMENT_ID,
-       resp.dep_Clrt_DEPt_Nme,
+       --resp.dep_DEPARTMENT_ID,
+       --resp.dep_Clrt_DEPt_Nme,
+       resp.DEPARTMENT_ID,
+       resp.Clrt_DEPt_Nme,
        resp.Domain_Goals,
        resp.Domain_Count,
 	   goal.GOAL
@@ -1004,16 +1563,21 @@ FROM
 	(
 	SELECT
 	       REC_FY,
-           resp_UNIT,
-           trnsf_UNIT,
+           --resp_UNIT,
+           --trnsf_UNIT,
            UNIT,
-	       Unit_Goals,
-           trnsf_Service_Line,
-           mdm_Service_Line,
-		   Service_Line_Goals,
+	       --Unit_Goals,
+	       Goals_UNIT,
+           Service_Line,
+           --trnsf_Service_Line,
+           --mdm_Service_Line,
+		   --Service_Line_Goals,
+		   Goals_Service_Line,
            sk_Dim_Clrt_DEPt,
-           dep_DEPARTMENT_ID,
-           dep_Clrt_DEPt_Nme,
+           --dep_DEPARTMENT_ID,
+           --dep_Clrt_DEPt_Nme,
+           DEPARTMENT_ID,
+           Clrt_DEPt_Nme,
            Domain_Goals,
            Domain_Count
 	FROM #surveys_ip_check
@@ -1031,7 +1595,8 @@ FROM
 	WHERE EPIC_DEPARTMENT_ID <> 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY
-	AND CAST(goal.EPIC_DEPARTMENT_ID AS NUMERIC(18,0)) = resp.dep_DEPARTMENT_ID
+	--AND CAST(goal.EPIC_DEPARTMENT_ID AS NUMERIC(18,0)) = resp.dep_DEPARTMENT_ID
+	AND CAST(goal.EPIC_DEPARTMENT_ID AS NUMERIC(18,0)) = resp.DEPARTMENT_ID
 	AND goal.DOMAIN = resp.Domain_Goals
 	WHERE goal.UNIT IS NULL
 ) goals
@@ -1048,7 +1613,8 @@ FROM Rptg.HCAHPS_Goals_Test
 WHERE EPIC_DEPARTMENT_ID = 'All Units'
 ) goal
 ON goal.GOAL_FISCAL_YR = goals.REC_FY
-AND goal.SERVICE_LINE = goals.Service_Line_Goals
+--AND goal.SERVICE_LINE = goals.Service_Line_Goals
+AND goal.SERVICE_LINE = goals.Goals_Service_Line
 AND goal.DOMAIN = goals.Domain_Goals
 ) [all]
 WHERE Domain_Goals IS NOT NULL AND Domain_Goals <> 'Additional Questions About Your Care'
@@ -1064,11 +1630,14 @@ WHERE Domain_Goals IS NOT NULL AND Domain_Goals <> 'Additional Questions About Y
 --		, Unit_Goals
 --		, Domain_Goals
 ORDER BY  REC_FY
-		, dep_Clrt_DEPt_Nme
-		, Service_Line_Goals
-		, Unit_Goals
+		--, dep_Clrt_DEPt_Nme
+		, Clrt_DEPt_Nme
+		--, Service_Line_Goals
+		, Goals_Service_Line
+		--, Unit_Goals
+		, Goals_UNIT
 		, Domain_Goals
-
+*/
 /*
 ------------------------------------------------------------------------------------------
 --- JOIN TO DIM_DATE
