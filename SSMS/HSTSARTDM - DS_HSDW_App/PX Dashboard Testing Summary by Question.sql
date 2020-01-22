@@ -86,6 +86,9 @@ DROP TABLE #surveys_ip3
 IF OBJECT_ID('tempdb..#HCAHPS_Units ') IS NOT NULL
 DROP TABLE #HCAHPS_Units
 
+IF OBJECT_ID('tempdb..#surveys_ip_sum ') IS NOT NULL
+DROP TABLE #surveys_ip_sum
+
 DECLARE @response_department_goal_unit_translation TABLE
 (
     Goal_Fiscal_Yr INT NOT NULL -- Fiscal year for translation
@@ -688,7 +691,11 @@ ORDER BY REC_FY, UNIT, Goals_UNIT, DEPARTMENT_ID, Service_Line, Goals_Service_Li
 	,VAL_COUNT
 	,rec.quarter_name
 	,rec.month_short_name
+	,rec.month_num
+	,rec.year_num
+	,surveys_ip.Goals_UNIT
 	,surveys_ip.DEPARTMENT_ID
+	,surveys_ip.Clrt_DEPt_Nme
 INTO #surveys_ip2
 FROM DS_HSDW_Prod.dbo.Dim_Date rec
 LEFT OUTER JOIN
@@ -722,7 +729,9 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Pat_Age_Survey_Answer,
        surveys_ip.Pat_Sex
      , surveys_ip_goals.GOAL
-	 , surveys_ip_goals.DEPARTMENT_ID
+	 , surveys_ip_goals.Goals_UNIT
+	 , surveys_ip.DEPARTMENT_ID
+	 , surveys_ip.Clrt_DEPt_Nme
 FROM #surveys_ip surveys_ip
 LEFT OUTER JOIN
 (
@@ -734,7 +743,6 @@ SELECT DISTINCT
   , Goals_Service_Line
   , Domain_Goals
   , GOAL
-  , DEPARTMENT_ID
 FROM #surveys_ip_goals
 WHERE UNIT <> 'All Units'
 ) surveys_ip_goals
@@ -775,7 +783,9 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Pat_Age_Survey_Answer,
        surveys_ip.Pat_Sex
      , surveys_ip_goals.GOAL
+	 , NULL AS Goals_UNIT
 	 , surveys_ip_goals.DEPARTMENT_ID
+	 , surveys_ip.Clrt_DEPt_Nme
 FROM #surveys_ip surveys_ip
 LEFT OUTER JOIN
 (
@@ -847,7 +857,11 @@ UNION ALL
 		,VAL_COUNT
 		,rec.quarter_name
 		,rec.month_short_name
-		,goals.DEPARTMENT_ID
+		,rec.month_num
+		,rec.year_num
+	    ,NULL AS Goals_UNIT
+	    ,surveys_ip.DEPARTMENT_ID
+		,surveys_ip.Clrt_DEPt_Nme
 	FROM
 		(SELECT * FROM DS_HSDW_Prod.dbo.Dim_Date WHERE day_date >= @locstartdate AND day_date <= @locenddate) rec
 	LEFT OUTER JOIN #surveys_ip surveys_ip
@@ -896,17 +910,152 @@ UNION ALL
    ,[VAL_COUNT]
    ,[quarter_name]
    ,[month_short_name]
+   ,month_num
+   ,year_num
+   ,Goals_UNIT
    ,DEPARTMENT_ID
+   ,Clrt_DEPt_Nme
   INTO #HCAHPS_Units
-  FROM [#surveys_ip3];
+  FROM [#surveys_ip3]
 
-SELECT mdm.hs_area_id, mdm.hs_area_name, resp.*
-FROM #HCAHPS_Units resp
-LEFT OUTER JOIN DS_HSDW_Prod.Rptg.vwRef_MDM_Location_Master_EpicSvc mdm
-ON mdm.epic_department_id = CAST(resp.DEPARTMENT_ID AS NUMERIC(18,0))
-WHERE Domain_Goals IS NOT NULL AND Domain_Goals <> 'Additional Questions About Your Care'
-AND DEPARTMENT_ID <> 'All Units'
-ORDER BY Event_FY, Event_Date, SURVEY_ID, UNIT, Domain_Goals, sk_Dim_PG_Question
+--SELECT *
+--FROM #HCAHPS_Units
+--WHERE (Domain_Goals IS NOT NULL
+--AND Domain_Goals <> 'Additional Questions About Your Care')
+--ORDER BY Event_FY
+--       , month_num
+--	   , month_short_name
+--	   , UNIT
+--	   , Service_Line
+--	   , DEPARTMENT_ID
+--	   , Clrt_DEPt_Nme
+--	   , Domain_Goals
+--	   , Goals_UNIT
+
+------------------------------------------------------------------------------------------
+--- GENERATE SUMMARY FOR TESTING.
+
+SELECT resp.Event_Type,
+       resp.Event_FY,
+	   resp.year_num,
+       resp.month_num,
+       resp.month_short_name,
+       resp.UNIT,
+       resp.Service_Line,
+       resp.Domain_Goals,
+	   resp.QUESTION_TEXT_ALIAS,
+       resp.Goals_UNIT,
+       resp.DEPARTMENT_ID,
+       resp.Clrt_DEPt_Nme,
+	   resp.GOAL,
+       SUM(resp.TOP_BOX) AS TOP_BOX,
+       SUM(resp.VAL_COUNT) AS VAL_COUNT,
+	   --CAST(CAST(SUM(resp.TOP_BOX) AS NUMERIC(6,3)) / CAST(SUM(resp.VAL_COUNT) AS NUMERIC(6,3)) AS NUMERIC(4,3)) AS SCORE,
+	   --COUNT(*) AS N
+	   COUNT(DISTINCT resp.SURVEY_ID) AS SURVEY_ID_COUNT
+INTO #surveys_ip_sum
+FROM
+(
+--SELECT DISTINCT
+SELECT
+	Event_Type,
+	Event_FY,
+	year_num,
+	month_num,
+	month_short_name,
+    UNIT,
+    Service_Line,
+    Goals_UNIT,
+    DEPARTMENT_ID,
+    Clrt_DEPt_Nme,
+    VALUE,
+	TOP_BOX,
+    VAL_COUNT,
+    DOMAIN,
+    Domain_Goals,
+	QUESTION_TEXT_ALIAS,
+	SURVEY_ID,
+	GOAL
+--INTO #surveys_ip_sum
+--FROM #surveys_ip
+FROM #HCAHPS_Units
+--WHERE REC_FY = 2020
+--WHERE REC_FY IN (2019,2020
+WHERE Event_FY IN (2019,2020)
+--AND sk_Dim_PG_Question = 17 -- Rate Hospital 0-10
+AND (Domain_Goals IS NOT NULL
+AND Domain_Goals <> 'Additional Questions About Your Care')
+) resp
+GROUP BY resp.Event_Type
+       , resp.Event_FY
+	   , resp.year_num
+       , resp.month_num
+	   , resp.month_short_name
+	   , resp.UNIT
+	   , resp.Service_Line
+	   , resp.Domain_Goals
+	   , resp.QUESTION_TEXT_ALIAS
+	   , resp.Goals_UNIT
+	   , resp.DEPARTMENT_ID
+	   , resp.Clrt_DEPt_Nme
+	   , resp.GOAL
+
+--SELECT Event_Type,
+--       Event_FY,
+--       month_num,
+--       month_short_name,
+--       UNIT,
+--       Service_Line,
+--       Domain_Goals,
+--       QUESTION_TEXT_ALIAS,
+--       Goals_UNIT,
+--       DEPARTMENT_ID,
+--       Clrt_DEPt_Nme,
+--       GOAL,
+--       TOP_BOX,
+--       VAL_COUNT,
+--       SURVEY_ID_COUNT AS N
+--FROM #surveys_ip_sum
+--ORDER BY Event_Type
+--       , Event_FY
+--       , month_num
+--	   , month_short_name
+--	   , UNIT
+--	   , Service_Line
+--	   , Domain_Goals
+--	   , QUESTION_TEXT_ALIAS
+--	   , Goals_UNIT
+--	   , DEPARTMENT_ID
+--	   , Clrt_DEPt_Nme
+
+SELECT Event_Type,
+       Event_FY,
+       month_num AS [Month],
+       month_short_name AS Month_Name,
+       Service_Line,
+       DEPARTMENT_ID,
+       Clrt_DEPt_Nme AS DEPARTMENT_NAME,
+       UNIT,
+       Domain_Goals,
+       QUESTION_TEXT_ALIAS,
+       Goals_UNIT,
+       TOP_BOX,
+       VAL_COUNT,
+       SURVEY_ID_COUNT AS N,
+       GOAL
+FROM #surveys_ip_sum
+ORDER BY Event_Type
+       , Event_FY
+	   , year_num
+       , month_num
+	   , month_short_name
+	   , Service_Line
+	   , DEPARTMENT_ID
+	   , Clrt_DEPt_Nme
+	   , UNIT
+	   , Domain_Goals
+	   , QUESTION_TEXT_ALIAS
+	   , Goals_UNIT
 
 GO
 

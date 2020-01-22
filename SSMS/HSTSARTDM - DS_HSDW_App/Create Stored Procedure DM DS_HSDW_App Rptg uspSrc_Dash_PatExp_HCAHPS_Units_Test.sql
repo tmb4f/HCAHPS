@@ -7,8 +7,8 @@ GO
 SET QUOTED_IDENTIFIER OFF
 GO
 
---ALTER PROC [Rptg].[uspSrc_Dash_PatExp_HCAHPS_Units]
---AS
+CREATE PROC [Rptg].[uspSrc_Dash_PatExp_HCAHPS_Units_Test]
+AS
 /**********************************************************************************************************************
 WHAT: Stored procedure for Patient Experience Dashboard - HCAHPS (Inpatient) - By Unit
 WHO : Chris Mitchell
@@ -43,8 +43,6 @@ MODS: 	12/1/2016 - Mapped to Balanced Scorecard Mapping to pull service line of 
 				    "All Service Lines"
 		06/11/2018 - Add communication about pain domain questions '2412','2414'
 		09/23/2019 - TMB - changed logic that assigns targets to domains
-		10/08/2019 - TMB - correct logic that assigns the 2020 targets
-		10/15/2019 - TMB - use Goal Service Line as the extracted/reported value for a survey
 ***********************************************************************************************************************/
 
 SET NOCOUNT ON
@@ -70,21 +68,6 @@ DECLARE @locstartdate SMALLDATETIME,
 
 SET @locstartdate = @startdate
 SET @locenddate   = @enddate
-
-IF OBJECT_ID('tempdb..#surveys_ip ') IS NOT NULL
-DROP TABLE #surveys_ip
-
-IF OBJECT_ID('tempdb..#surveys_ip_goals ') IS NOT NULL
-DROP TABLE #surveys_ip_goals
-
-IF OBJECT_ID('tempdb..#surveys_ip2 ') IS NOT NULL
-DROP TABLE #surveys_ip2
-
-IF OBJECT_ID('tempdb..#surveys_ip3 ') IS NOT NULL
-DROP TABLE #surveys_ip3
-
-IF OBJECT_ID('tempdb..#HCAHPS_Units ') IS NOT NULL
-DROP TABLE #HCAHPS_Units
 
 DECLARE @response_department_goal_unit_translation TABLE
 (
@@ -194,6 +177,7 @@ SELECT DISTINCT
 				        ELSE bcsm.Service_Line
 			       END
 		           ELSE mdm.service_line
+			  --END AS Service_Line_Goals
 	          END, 'Unknown') AS Goals_Service_Line
 	,CAST(Resp.VALUE AS NVARCHAR(500)) AS VALUE -- prevents Tableau from erroring out on import data source
 	,CASE WHEN Resp.VALUE IS NOT NULL THEN 1 ELSE 0 END AS VAL_COUNT
@@ -270,6 +254,7 @@ SELECT DISTINCT
 	(	
 		SELECT DISTINCT
 		SURVEY_ID
+		--,VALUE AS resp_UNIT
 		,CASE VALUE
 			WHEN 'ADMT (Closed)' THEN 'Other'
 			WHEN 'ER' THEN 'Other'
@@ -363,7 +348,7 @@ FROM -- Goals_UNIT values with matching UNIT values in goals table
 	     , goals.UNIT
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2018, 2019
 	AND goal.UNIT = resp.Goals_UNIT -- 2018, 2019
@@ -409,7 +394,7 @@ FROM
 	     , UNIT
 	     , DOMAIN
 		 , GOAL
-	FROM Rptg.HCAHPS_Goals
+	FROM Rptg.HCAHPS_Goals_Test
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY
 	AND goal.UNIT = resp.Goals_UNIT
@@ -423,7 +408,7 @@ SELECT GOAL_FISCAL_YR
      , UNIT
 	 , DOMAIN
 	 , GOAL
-FROM Rptg.HCAHPS_Goals
+FROM Rptg.HCAHPS_Goals_Test
 WHERE UNIT = 'All Units'
 ) goal
 ON goal.GOAL_FISCAL_YR = goals.REC_FY
@@ -455,7 +440,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.UNIT = 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2018, 2019
@@ -478,7 +463,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.GOAL_FISCAL_YR IN (2018,2019)
 	AND goals.UNIT = 'All Units' AND goals.SERVICE_LINE = 'All Service Lines'
 	) goal
@@ -513,13 +498,13 @@ FROM -- DEPARTMENT_ID values with matching EPIC_DEPARTMENT_ID values in goals ta
 		 , goals.EPIC_DEPARTMENT_NAME
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.EPIC_DEPARTMENT_ID <> 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2020
 	AND goal.EPIC_DEPARTMENT_ID = resp.DEPARTMENT_ID -- 2020
 	AND goal.DOMAIN = resp.Domain_Goals -- 2020
-	WHERE goal.EPIC_DEPARTMENT_ID IS NOT NULL
+	WHERE goal.UNIT IS NOT NULL
 UNION ALL -- DEPARTMENT_ID values without matching EPIC_DEPARTMENT_ID values in goals table: use 'All Units' goals for respective service line
 SELECT
        goals.REC_FY,
@@ -562,13 +547,13 @@ FROM
 		 , EPIC_DEPARTMENT_NAME
 	     , DOMAIN
 		 , GOAL
-	FROM Rptg.HCAHPS_Goals
+	FROM Rptg.HCAHPS_Goals_Test
 	WHERE EPIC_DEPARTMENT_ID <> 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY
 	AND goal.EPIC_DEPARTMENT_ID = resp.DEPARTMENT_ID
 	AND goal.DOMAIN = resp.Domain_Goals
-	WHERE goal.EPIC_DEPARTMENT_ID IS NULL
+	WHERE goal.UNIT IS NULL
 ) goals
 LEFT OUTER JOIN
 (
@@ -579,7 +564,7 @@ SELECT GOAL_FISCAL_YR
 	 , EPIC_DEPARTMENT_NAME
 	 , DOMAIN
 	 , GOAL
-FROM Rptg.HCAHPS_Goals
+FROM Rptg.HCAHPS_Goals_Test
 WHERE EPIC_DEPARTMENT_ID = 'All Units'
 ) goal
 ON goal.GOAL_FISCAL_YR = goals.REC_FY
@@ -613,7 +598,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.EPIC_DEPARTMENT_ID = 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2020
@@ -638,7 +623,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.GOAL_FISCAL_YR = 2020
 	AND goals.EPIC_DEPARTMENT_ID = 'All Units' AND goals.SERVICE_LINE = 'All Service Lines'
 	) goal
@@ -681,14 +666,13 @@ ORDER BY REC_FY, UNIT, Goals_UNIT, DEPARTMENT_ID, Service_Line, Goals_Service_Li
 	,Phys_Div
 	,GOAL
 	,CASE WHEN surveys_ip.UNIT = 'SHRTSTAY' THEN 'SSU' ELSE surveys_ip.UNIT END AS UNIT -- CAN'T MAP SHRTSTAY TO GOALS AND SVC LINE WITHOUT A CHANGE TO BCSM TABLE
-	,surveys_ip.Goals_Service_Line AS Service_Line
+	,surveys_ip.Service_Line
 	,VALUE
 	,Value_Resp_Grp
 	,TOP_BOX
 	,VAL_COUNT
 	,rec.quarter_name
 	,rec.month_short_name
-	,surveys_ip.DEPARTMENT_ID
 INTO #surveys_ip2
 FROM DS_HSDW_Prod.dbo.Dim_Date rec
 LEFT OUTER JOIN
@@ -702,7 +686,6 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Phys_Dept,
        surveys_ip.Phys_Div,
        surveys_ip.Service_Line,
-	   surveys_ip.Goals_Service_Line,
        surveys_ip.UNIT,
        surveys_ip.VALUE,
        surveys_ip.VAL_COUNT,
@@ -722,7 +705,6 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Pat_Age_Survey_Answer,
        surveys_ip.Pat_Sex
      , surveys_ip_goals.GOAL
-	 , surveys_ip_goals.DEPARTMENT_ID
 FROM #surveys_ip surveys_ip
 LEFT OUTER JOIN
 (
@@ -734,7 +716,6 @@ SELECT DISTINCT
   , Goals_Service_Line
   , Domain_Goals
   , GOAL
-  , DEPARTMENT_ID
 FROM #surveys_ip_goals
 WHERE UNIT <> 'All Units'
 ) surveys_ip_goals
@@ -755,7 +736,6 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Phys_Dept,
        surveys_ip.Phys_Div,
        surveys_ip.Service_Line,
-	   surveys_ip.Goals_Service_Line,
        surveys_ip.UNIT,
        surveys_ip.VALUE,
        surveys_ip.VAL_COUNT,
@@ -775,7 +755,6 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Pat_Age_Survey_Answer,
        surveys_ip.Pat_Sex
      , surveys_ip_goals.GOAL
-	 , surveys_ip_goals.DEPARTMENT_ID
 FROM #surveys_ip surveys_ip
 LEFT OUTER JOIN
 (
@@ -840,14 +819,13 @@ UNION ALL
 		,GOAL
 		,CASE WHEN SURVEY_ID IS NULL THEN NULL
 			  ELSE 'All Units' END AS UNIT
-	    ,surveys_ip.Goals_Service_Line AS Service_Line
+		,surveys_ip.Service_Line
 		,VALUE
 		,Value_Resp_Grp
 		,TOP_BOX
 		,VAL_COUNT
 		,rec.quarter_name
 		,rec.month_short_name
-		,goals.DEPARTMENT_ID
 	FROM
 		(SELECT * FROM DS_HSDW_Prod.dbo.Dim_Date WHERE day_date >= @locstartdate AND day_date <= @locenddate) rec
 	LEFT OUTER JOIN #surveys_ip surveys_ip
@@ -896,17 +874,7 @@ UNION ALL
    ,[VAL_COUNT]
    ,[quarter_name]
    ,[month_short_name]
-   ,DEPARTMENT_ID
-  INTO #HCAHPS_Units
-  FROM [#surveys_ip3];
-
-SELECT mdm.hs_area_id, mdm.hs_area_name, resp.*
-FROM #HCAHPS_Units resp
-LEFT OUTER JOIN DS_HSDW_Prod.Rptg.vwRef_MDM_Location_Master_EpicSvc mdm
-ON mdm.epic_department_id = CAST(resp.DEPARTMENT_ID AS NUMERIC(18,0))
-WHERE Domain_Goals IS NOT NULL AND Domain_Goals <> 'Additional Questions About Your Care'
-AND DEPARTMENT_ID <> 'All Units'
-ORDER BY Event_FY, Event_Date, SURVEY_ID, UNIT, Domain_Goals, sk_Dim_PG_Question
+  FROM [#surveys_ip3]
 
 GO
 

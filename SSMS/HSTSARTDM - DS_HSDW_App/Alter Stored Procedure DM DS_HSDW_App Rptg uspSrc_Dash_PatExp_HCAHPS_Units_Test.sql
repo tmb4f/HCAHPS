@@ -7,8 +7,8 @@ GO
 SET QUOTED_IDENTIFIER OFF
 GO
 
---ALTER PROC [Rptg].[uspSrc_Dash_PatExp_HCAHPS_Units]
---AS
+ALTER PROC [Rptg].[uspSrc_Dash_PatExp_HCAHPS_Units_Test]
+AS
 /**********************************************************************************************************************
 WHAT: Stored procedure for Patient Experience Dashboard - HCAHPS (Inpatient) - By Unit
 WHO : Chris Mitchell
@@ -70,21 +70,6 @@ DECLARE @locstartdate SMALLDATETIME,
 
 SET @locstartdate = @startdate
 SET @locenddate   = @enddate
-
-IF OBJECT_ID('tempdb..#surveys_ip ') IS NOT NULL
-DROP TABLE #surveys_ip
-
-IF OBJECT_ID('tempdb..#surveys_ip_goals ') IS NOT NULL
-DROP TABLE #surveys_ip_goals
-
-IF OBJECT_ID('tempdb..#surveys_ip2 ') IS NOT NULL
-DROP TABLE #surveys_ip2
-
-IF OBJECT_ID('tempdb..#surveys_ip3 ') IS NOT NULL
-DROP TABLE #surveys_ip3
-
-IF OBJECT_ID('tempdb..#HCAHPS_Units ') IS NOT NULL
-DROP TABLE #HCAHPS_Units
 
 DECLARE @response_department_goal_unit_translation TABLE
 (
@@ -363,7 +348,7 @@ FROM -- Goals_UNIT values with matching UNIT values in goals table
 	     , goals.UNIT
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2018, 2019
 	AND goal.UNIT = resp.Goals_UNIT -- 2018, 2019
@@ -409,7 +394,7 @@ FROM
 	     , UNIT
 	     , DOMAIN
 		 , GOAL
-	FROM Rptg.HCAHPS_Goals
+	FROM Rptg.HCAHPS_Goals_Test
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY
 	AND goal.UNIT = resp.Goals_UNIT
@@ -423,7 +408,7 @@ SELECT GOAL_FISCAL_YR
      , UNIT
 	 , DOMAIN
 	 , GOAL
-FROM Rptg.HCAHPS_Goals
+FROM Rptg.HCAHPS_Goals_Test
 WHERE UNIT = 'All Units'
 ) goal
 ON goal.GOAL_FISCAL_YR = goals.REC_FY
@@ -455,7 +440,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.UNIT = 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2018, 2019
@@ -478,7 +463,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.GOAL_FISCAL_YR IN (2018,2019)
 	AND goals.UNIT = 'All Units' AND goals.SERVICE_LINE = 'All Service Lines'
 	) goal
@@ -513,7 +498,7 @@ FROM -- DEPARTMENT_ID values with matching EPIC_DEPARTMENT_ID values in goals ta
 		 , goals.EPIC_DEPARTMENT_NAME
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.EPIC_DEPARTMENT_ID <> 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2020
@@ -562,7 +547,7 @@ FROM
 		 , EPIC_DEPARTMENT_NAME
 	     , DOMAIN
 		 , GOAL
-	FROM Rptg.HCAHPS_Goals
+	FROM Rptg.HCAHPS_Goals_Test
 	WHERE EPIC_DEPARTMENT_ID <> 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY
@@ -579,7 +564,7 @@ SELECT GOAL_FISCAL_YR
 	 , EPIC_DEPARTMENT_NAME
 	 , DOMAIN
 	 , GOAL
-FROM Rptg.HCAHPS_Goals
+FROM Rptg.HCAHPS_Goals_Test
 WHERE EPIC_DEPARTMENT_ID = 'All Units'
 ) goal
 ON goal.GOAL_FISCAL_YR = goals.REC_FY
@@ -613,7 +598,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.EPIC_DEPARTMENT_ID = 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2020
@@ -638,7 +623,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.GOAL_FISCAL_YR = 2020
 	AND goals.EPIC_DEPARTMENT_ID = 'All Units' AND goals.SERVICE_LINE = 'All Service Lines'
 	) goal
@@ -688,7 +673,6 @@ ORDER BY REC_FY, UNIT, Goals_UNIT, DEPARTMENT_ID, Service_Line, Goals_Service_Li
 	,VAL_COUNT
 	,rec.quarter_name
 	,rec.month_short_name
-	,surveys_ip.DEPARTMENT_ID
 INTO #surveys_ip2
 FROM DS_HSDW_Prod.dbo.Dim_Date rec
 LEFT OUTER JOIN
@@ -722,7 +706,6 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Pat_Age_Survey_Answer,
        surveys_ip.Pat_Sex
      , surveys_ip_goals.GOAL
-	 , surveys_ip_goals.DEPARTMENT_ID
 FROM #surveys_ip surveys_ip
 LEFT OUTER JOIN
 (
@@ -734,7 +717,6 @@ SELECT DISTINCT
   , Goals_Service_Line
   , Domain_Goals
   , GOAL
-  , DEPARTMENT_ID
 FROM #surveys_ip_goals
 WHERE UNIT <> 'All Units'
 ) surveys_ip_goals
@@ -775,7 +757,6 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Pat_Age_Survey_Answer,
        surveys_ip.Pat_Sex
      , surveys_ip_goals.GOAL
-	 , surveys_ip_goals.DEPARTMENT_ID
 FROM #surveys_ip surveys_ip
 LEFT OUTER JOIN
 (
@@ -847,7 +828,6 @@ UNION ALL
 		,VAL_COUNT
 		,rec.quarter_name
 		,rec.month_short_name
-		,goals.DEPARTMENT_ID
 	FROM
 		(SELECT * FROM DS_HSDW_Prod.dbo.Dim_Date WHERE day_date >= @locstartdate AND day_date <= @locenddate) rec
 	LEFT OUTER JOIN #surveys_ip surveys_ip
@@ -896,17 +876,7 @@ UNION ALL
    ,[VAL_COUNT]
    ,[quarter_name]
    ,[month_short_name]
-   ,DEPARTMENT_ID
-  INTO #HCAHPS_Units
-  FROM [#surveys_ip3];
-
-SELECT mdm.hs_area_id, mdm.hs_area_name, resp.*
-FROM #HCAHPS_Units resp
-LEFT OUTER JOIN DS_HSDW_Prod.Rptg.vwRef_MDM_Location_Master_EpicSvc mdm
-ON mdm.epic_department_id = CAST(resp.DEPARTMENT_ID AS NUMERIC(18,0))
-WHERE Domain_Goals IS NOT NULL AND Domain_Goals <> 'Additional Questions About Your Care'
-AND DEPARTMENT_ID <> 'All Units'
-ORDER BY Event_FY, Event_Date, SURVEY_ID, UNIT, Domain_Goals, sk_Dim_PG_Question
+  FROM [#surveys_ip3]
 
 GO
 
