@@ -55,6 +55,9 @@ DECLARE @currdate AS DATE;
 DECLARE @startdate AS DATE;
 DECLARE @enddate AS DATE;
 
+SET @startdate = '7/1/2019'
+SET @enddate = '6/30/2020'
+
     SET @currdate=CAST(GETDATE() AS DATE);
 
     IF @startdate IS NULL
@@ -320,6 +323,24 @@ SELECT DISTINCT
   CREATE NONCLUSTERED INDEX IX_surveysip2 ON #surveys_ip (REC_FY, Service_Line, Goals_Service_Line, Domain_Goals, sk_Dim_PG_Question, SURVEY_ID)
   CREATE NONCLUSTERED INDEX IX_surveysip3 ON #surveys_ip (REC_FY, DEPARTMENT_ID, Domain_Goals, sk_Dim_PG_Question, SURVEY_ID)
 
+--SELECT DISTINCT
+--	REC_FY,
+--    Service_Line,
+--    UNIT,
+--    Goals_UNIT,
+--    DEPARTMENT_ID,
+--    Clrt_DEPt_Nme,
+--    Goals_Service_Line,
+--    DOMAIN,
+--    Domain_Goals
+--FROM #surveys_ip
+--WHERE REC_FY = 2020
+--AND DOMAIN IS NOT NULL
+--ORDER BY
+--	Goals_Service_Line
+--  , Clrt_DEPt_Nme
+--  , Domain_Goals
+
 ------------------------------------------------------------------------------------------
 --- GENERATE GOALS
 
@@ -363,7 +384,7 @@ FROM -- Goals_UNIT values with matching UNIT values in goals table
 	     , goals.UNIT
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2018, 2019
 	AND goal.UNIT = resp.Goals_UNIT -- 2018, 2019
@@ -409,7 +430,7 @@ FROM
 	     , UNIT
 	     , DOMAIN
 		 , GOAL
-	FROM Rptg.HCAHPS_Goals
+	FROM Rptg.HCAHPS_Goals_Test
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY
 	AND goal.UNIT = resp.Goals_UNIT
@@ -423,7 +444,7 @@ SELECT GOAL_FISCAL_YR
      , UNIT
 	 , DOMAIN
 	 , GOAL
-FROM Rptg.HCAHPS_Goals
+FROM Rptg.HCAHPS_Goals_Test
 WHERE UNIT = 'All Units'
 ) goal
 ON goal.GOAL_FISCAL_YR = goals.REC_FY
@@ -455,7 +476,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.UNIT = 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2018, 2019
@@ -478,7 +499,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.GOAL_FISCAL_YR IN (2018,2019)
 	AND goals.UNIT = 'All Units' AND goals.SERVICE_LINE = 'All Service Lines'
 	) goal
@@ -513,7 +534,7 @@ FROM -- DEPARTMENT_ID values with matching EPIC_DEPARTMENT_ID values in goals ta
 		 , goals.EPIC_DEPARTMENT_NAME
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.EPIC_DEPARTMENT_ID <> 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2020
@@ -562,7 +583,7 @@ FROM
 		 , EPIC_DEPARTMENT_NAME
 	     , DOMAIN
 		 , GOAL
-	FROM Rptg.HCAHPS_Goals
+	FROM Rptg.HCAHPS_Goals_Test
 	WHERE EPIC_DEPARTMENT_ID <> 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY
@@ -579,7 +600,7 @@ SELECT GOAL_FISCAL_YR
 	 , EPIC_DEPARTMENT_NAME
 	 , DOMAIN
 	 , GOAL
-FROM Rptg.HCAHPS_Goals
+FROM Rptg.HCAHPS_Goals_Test
 WHERE EPIC_DEPARTMENT_ID = 'All Units'
 ) goal
 ON goal.GOAL_FISCAL_YR = goals.REC_FY
@@ -613,7 +634,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.EPIC_DEPARTMENT_ID = 'All Units'
 	) goal
 	ON goal.GOAL_FISCAL_YR = resp.REC_FY -- 2020
@@ -638,7 +659,7 @@ FROM
 		 , goals.SERVICE_LINE
 	     , goals.DOMAIN
 		 , goals.GOAL
-	FROM Rptg.HCAHPS_Goals goals
+	FROM Rptg.HCAHPS_Goals_Test goals
 	WHERE goals.GOAL_FISCAL_YR = 2020
 	AND goals.EPIC_DEPARTMENT_ID = 'All Units' AND goals.SERVICE_LINE = 'All Service Lines'
 	) goal
@@ -648,6 +669,22 @@ ORDER BY REC_FY, UNIT, Goals_UNIT, DEPARTMENT_ID, Service_Line, Goals_Service_Li
   -- Create indexes for temp table #surveys_ip_goals
   CREATE NONCLUSTERED INDEX IX_surveysipgoals ON #surveys_ip_goals (REC_FY, UNIT, Goals_UNIT, Service_Line, Goals_Service_Line, Domain_Goals)
   CREATE NONCLUSTERED INDEX IX_ssurveysipgoals2 ON #surveys_ip_goals (REC_FY, DEPARTMENT_ID, Service_Line, Goals_Service_Line, Domain_Goals)
+
+--SELECT DISTINCT
+--	REC_FY,
+--    UNIT,
+--    Goals_UNIT,
+--    Service_Line,
+--    Goals_Service_Line,
+--    DEPARTMENT_ID,
+--    Domain_Goals,
+--    GOAL
+--FROM #surveys_ip_goals
+--WHERE REC_FY = 2020
+--ORDER BY Goals_Service_Line
+--       , Goals_UNIT
+--	   , DEPARTMENT_ID
+--	   , Domain_Goals
 
 ------------------------------------------------------------------------------------------
 --- JOIN TO DIM_DATE
@@ -681,6 +718,7 @@ ORDER BY REC_FY, UNIT, Goals_UNIT, DEPARTMENT_ID, Service_Line, Goals_Service_Li
 	,Phys_Div
 	,GOAL
 	,CASE WHEN surveys_ip.UNIT = 'SHRTSTAY' THEN 'SSU' ELSE surveys_ip.UNIT END AS UNIT -- CAN'T MAP SHRTSTAY TO GOALS AND SVC LINE WITHOUT A CHANGE TO BCSM TABLE
+	,surveys_ip.DEPARTMENT_ID
 	,surveys_ip.Goals_Service_Line AS Service_Line
 	,VALUE
 	,Value_Resp_Grp
@@ -688,7 +726,6 @@ ORDER BY REC_FY, UNIT, Goals_UNIT, DEPARTMENT_ID, Service_Line, Goals_Service_Li
 	,VAL_COUNT
 	,rec.quarter_name
 	,rec.month_short_name
-		,surveys_ip.DEPARTMENT_ID
 INTO #surveys_ip2
 FROM DS_HSDW_Prod.dbo.Dim_Date rec
 LEFT OUTER JOIN
@@ -704,6 +741,7 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Service_Line,
 	   surveys_ip.Goals_Service_Line,
        surveys_ip.UNIT,
+	   surveys_ip.DEPARTMENT_ID,
        surveys_ip.VALUE,
        surveys_ip.VAL_COUNT,
        surveys_ip.DOMAIN,
@@ -722,7 +760,6 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Pat_Age_Survey_Answer,
        surveys_ip.Pat_Sex
      , surveys_ip_goals.GOAL
-		 , surveys_ip_goals.DEPARTMENT_ID
 FROM #surveys_ip surveys_ip
 LEFT OUTER JOIN
 (
@@ -734,7 +771,6 @@ SELECT DISTINCT
   , Goals_Service_Line
   , Domain_Goals
   , GOAL
-	  , DEPARTMENT_ID
 FROM #surveys_ip_goals
 WHERE UNIT <> 'All Units'
 ) surveys_ip_goals
@@ -757,6 +793,7 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Service_Line,
 	   surveys_ip.Goals_Service_Line,
        surveys_ip.UNIT,
+	   surveys_ip.DEPARTMENT_ID,
        surveys_ip.VALUE,
        surveys_ip.VAL_COUNT,
        surveys_ip.DOMAIN,
@@ -775,7 +812,6 @@ SELECT surveys_ip.SURVEY_ID,
        surveys_ip.Pat_Age_Survey_Answer,
        surveys_ip.Pat_Sex
      , surveys_ip_goals.GOAL
-		 , surveys_ip_goals.DEPARTMENT_ID
 FROM #surveys_ip surveys_ip
 LEFT OUTER JOIN
 (
@@ -840,6 +876,7 @@ UNION ALL
 		,GOAL
 		,CASE WHEN SURVEY_ID IS NULL THEN NULL
 			  ELSE 'All Units' END AS UNIT
+		,surveys_ip.DEPARTMENT_ID
 	    ,surveys_ip.Goals_Service_Line AS Service_Line
 		,VALUE
 		,Value_Resp_Grp
@@ -847,7 +884,6 @@ UNION ALL
 		,VAL_COUNT
 		,rec.quarter_name
 		,rec.month_short_name
-			,goals.DEPARTMENT_ID
 	FROM
 		(SELECT * FROM DS_HSDW_Prod.dbo.Dim_Date WHERE day_date >= @locstartdate AND day_date <= @locenddate) rec
 	LEFT OUTER JOIN #surveys_ip surveys_ip
@@ -859,6 +895,21 @@ UNION ALL
 	ON surveys_ip.REC_FY = goals.REC_FY AND surveys_ip.Domain_Goals = goals.Domain_Goals
 )
 
+SELECT DISTINCT
+	Service_Line,
+	DEPARTMENT_ID,
+	UNIT,
+	DOMAIN,
+    Domain_Goals,
+	GOAL	
+FROM #surveys_ip3
+WHERE DOMAIN IS NOT NULL
+AND GOAL IS NOT NULL
+ORDER BY Service_Line
+       , DEPARTMENT_ID
+       , UNIT
+	   , Domain_Goals
+/*
 ----------------------------------------------------------------------------------------------------------------------
 -- RESULTS
  SELECT [Event_Type]
@@ -896,7 +947,6 @@ UNION ALL
    ,[VAL_COUNT]
    ,[quarter_name]
    ,[month_short_name]
-	   ,DEPARTMENT_ID
   INTO #HCAHPS_Units
   FROM [#surveys_ip3];
 
@@ -912,7 +962,7 @@ SELECT DISTINCT
 	Recvd_Date
 FROM #HCAHPS_Units
 ORDER BY Recvd_Date
-
+*/
 GO
 
 
